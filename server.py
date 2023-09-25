@@ -20,12 +20,14 @@ def handle_client(conn, addr): # handle between client and server communication
     connected = True
     while connected:
         msg_length = conn.recv(HEADER).decode(FORMAT) # this is how many bytes you want to receive from client in bracket
-        msg_length = int(msg_length).decode(FORMAT)
-        msg = conn.recv(msg_length).decode(FORMAT)
-        if msg == DISCONNECT_MESSAGE:
-            connected = False
+        if msg_length: 
+            msg_length = int(msg_length)
+            msg = conn.recv(msg_length).decode(FORMAT)
+            if msg == DISCONNECT_MESSAGE:
+                connected = False
 
         print(f"[{addr}] {msg}") # This help receive the message from what client say
+        conn.send("Msg received".encode(FORMAT))
     
     conn.close()
 
