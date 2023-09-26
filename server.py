@@ -2,13 +2,19 @@ import socket
 import threading
 
 HEADER = 64 # This is 64 bytes that server can handle
-PORT = 8080 #THERE ARE 10000 PORT ABOVE 1000 is goo for you 
-SERVER = "192.168.65.1" # CHANGE THIS WHENEVER YOU ARE IN DIFFERENT NETWORK
+PORT = 5050 #THERE ARE 10000 PORT ABOVE 1000 is goo for you 
+SERVER = "192.168.52.1" # CHANGE THIS WHENEVER YOU ARE IN DIFFERENT NETWORK
 SERVER = socket.gethostbyname(socket.gethostname()) #THIS IS THE SAME ABOVE BUT BETTER, YOU DON'T NEED TO CHANGE, CAN DELETE LINE ABOVE
 ADDR = (SERVER, PORT)
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
 
+# This is to save user INPUT file
+file_name = 'Test.txt'
+
+with open(file_name, 'w', encoding='utf-8') as my_file:
+    my_file.write(input('Your message: ') + '\n')
+    
 #from this  make a socket to allow open device to other connections
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #in bracket is your socket family name, sock stream is type
