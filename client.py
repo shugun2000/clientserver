@@ -1,10 +1,10 @@
 import socket
 
 HEADER = 64 # This is 64 bytes that server can handle
-PORT = 8080 #THERE ARE 10000 PORT ABOVE 1000 is goo for you 
+PORT = 5050 #THERE ARE 10000 PORT ABOVE 1000 is goo for you 
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
-SERVER = "192.168.52.1"  #Change to your local IP, or just put gethostname
+SERVER = "172.18.28.243"  #Change to your local IP, or just put gethostname
 ADDR = (SERVER, PORT)
 
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -25,3 +25,13 @@ send("Hello Minh")
 input()
 send("Hello Everyone!")
 send(DISCONNECT_MESSAGE)
+
+file = open ('Signa,png', 'rb')
+image_data = file.read(2048)
+
+while image_data:
+    client.send(image_data)
+    image_data = file.read(2048)
+
+file.close()
+client.close()
