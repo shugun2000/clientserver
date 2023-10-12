@@ -1,5 +1,5 @@
 import socket
-
+import os
 
 def client_program():
     host = socket.gethostname()  # as both code is running on same pc
