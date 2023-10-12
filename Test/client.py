@@ -7,6 +7,7 @@ def client_program():
 
     client_socket = socket.socket()  # instantiate
     client_socket.connect((host, port))  # connect to the server
+    client.send("I am CLIENT\n").encode
 
     message = input(" -> ")  # take input
 
