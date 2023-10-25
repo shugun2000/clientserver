@@ -1,21 +1,41 @@
 import sys
-import asyncio
+import socket
+import selectors
+import types
+import traceback 
+import threading
+
 from libserver import Message
 
-async def accept_wrapper(reader, writer):
-    addr = writer.get_extra_info('peername')
+def accept_wrapper(sock):
+    conn, addr = sock.accept()
     print(f"Accepted connection from {addr}")
-    message = Message(reader, writer, addr)
-    asyncio.create_task(message.process_events())
+    conn.setblocking(False)
+    message = Message(sel, conn, addr)
+    sel.register(conn, selectors.EVENT_READ, data=message)
 
-async def start_server(host, port):
-    server = await asyncio.start_server(
-        accept_wrapper, host, port)
+sel = selectors.DefaultSelector()
 
-    async with server:
-        await server.serve_forever()
+def start_server():
+    try:
+        while True:
+            events = sel.select(timeout=1)  # Set a timeout (e.g., 1 second)
+            for key, mask in events:
+                if key.data is None:
+                    accept_wrapper(key.fileobj)
+                else:
+                    message = key.data
+                    try:
+                        message.process_events(mask)
+                    except Exception:
+                        print(
+                            f"Main: Error: Exception for {message.addr}:\n"
+                            f"{traceback.format_exc()}"
+                        )
 
-if __name__ == '__main__':
-    host = '10.1.2.138'
-    port = 65432
-    asyncio.run(start_server(host, port))
+    except KeyboardInterrupt:
+        print("Server shutting down.")
+    finally:
+        sel.close()
+
+start_server()
