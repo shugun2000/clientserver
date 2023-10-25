@@ -1,34 +1,21 @@
 import sys
-import socket
-import selectors
-import types
+import asyncio
+from libserver import Message
 
-def accept_wrapper(sock):
-    conn, addr = sock.accept()  # Should be ready to read
+async def accept_wrapper(reader, writer):
+    addr = writer.get_extra_info('peername')
     print(f"Accepted connection from {addr}")
-    conn.setblocking(False)
-    message = libserver.Message(sel, conn, addr)
-    sel.register(conn, selectors.EVENT_READ, data=message)
+    message = Message(reader, writer, addr)
+    asyncio.create_task(message.process_events())
 
-sel = selectors.DefaultSelector()
+async def start_server(host, port):
+    server = await asyncio.start_server(
+        accept_wrapper, host, port)
 
-try:
-    while True:
-        events = sel.select(timeout=None)
-        for key, mask in events:
-            if key.data is None:
-                accept_wrapper(key.fileobj)
-            else:
-                message = key.data
-                try:
-                    message.process_events(mask)
-                except Exception:
-                    print(
-                        f"Main: Error: Exception for {message.addr}:\n"
-                        f"{traceback.format_exc()}"
-                        )
+    async with server:
+        await server.serve_forever()
 
-except KeyboardInterrupt:
-    print("Server shutting down.")
-finally:
-    sel.close()
+if __name__ == '__main__':
+    host = '10.1.2.138'
+    port = 65432
+    asyncio.run(start_server(host, port))

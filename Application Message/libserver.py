@@ -18,24 +18,30 @@ class Message:
 
     def create_response(self):
         if self.jsonheader["content-type"] == "text/json":
-            response = self._create_response_json_content()
+            response_data = "Your JSON response data here" 
+            response = self._create_response_json_content(response_data)
         else:
-            response = self._create_response_binary_content()
+            response_data = b"Your binary response data here"  
+            response = self._create_response_binary_content(response_data)
         message = self._create_message(**response)
         self.response_created = True
         self._send_buffer += message
 
-    def _create_response_json_content(self):
-        # Implement JSON response creation logic here
-        return {"content-type": "text/json", "content-encoding": "utf-8", "content-length": len(response_data), "response_data": response_data}
-
-    def _create_response_binary_content(self):
-        # Implement binary response creation logic here
-        return {"content-type": "binary", "content-length": len(response_data), "response_data": response_data}
-
+    def _create_response_json_content(self, response_data):
+        return {
+        "content-type": "text/json",
+        "content-encoding": "utf-8",
+        "content-length": len(response_data),
+        "response_data": response_data,
+    }
+    def _create_response_binary_content(self, response_data):
+        return {
+        "content-type": "binary",
+        "content-length": len(response_data),
+        "response_data": response_data,
+        }
     def _create_message(self, **response):
-        # Implement message creation logic here
-        return response_data
+        return response
 
     def _write(self):
         if self._send_buffer:
@@ -50,7 +56,6 @@ class Message:
                     self.close()
 
     def _read(self):
-        # Implement read logic here
         pass
 
     def process_protoheader(self):
@@ -104,6 +109,4 @@ class Message:
             self.write()
 
 if __name__ == '__main__':
-    pass  # You can add client or server code here
-
-# Make sure to implement _json_decode and any missing logic as needed for your application.
+    pass 
