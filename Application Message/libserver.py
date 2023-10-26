@@ -1,8 +1,8 @@
 import sys
 import socket
 import selectors
-import types
 import struct
+import json
 
 class Message:
     def __init__(self, selector, sock, addr):
@@ -18,34 +18,38 @@ class Message:
 
     def create_response(self):
         if self.jsonheader["content-type"] == "text/json":
-            response_data = "Your JSON response data here" 
+            response_data = {"message": "Your JSON response data here"}
             response = self._create_response_json_content(response_data)
         else:
-            response_data = b"Your binary response data here"  
+            response_data = b"Your binary response data here"
             response = self._create_response_binary_content(response_data)
         message = self._create_message(**response)
         self.response_created = True
         self._send_buffer += message
 
     def _create_response_json_content(self, response_data):
+        response_data = json.dumps(response_data).encode("utf-8")
         return {
-        "content-type": "text/json",
-        "content-encoding": "utf-8",
-        "content-length": len(response_data),
-        "response_data": response_data,
-    }
+            "content-type": "text/json",
+            "content-encoding": "utf-8",
+            "content-length": len(response_data),
+            "response_data": response_data,
+        }
+
     def _create_response_binary_content(self, response_data):
         return {
-        "content-type": "binary",
-        "content-length": len(response_data),
-        "response_data": response_data,
+            "content-type": "binary",
+            "content-length": len(response_data),
+            "response_data": response_data,
         }
+
     def _create_message(self, **response):
-        return response
+        jsonheader = json.dumps(response).encode("utf-8")
+        header = struct.pack(">H", len(jsonheader))
+        return header + jsonheader
 
     def _write(self):
         if self._send_buffer:
-            print(f"Sending {self._send_buffer!r} to {self.addr}")
             try:
                 sent = self.sock.send(self._send_buffer)
             except BlockingIOError:
@@ -61,9 +65,7 @@ class Message:
     def process_protoheader(self):
         hdrlen = 2
         if len(self._recv_buffer) >= hdrlen:
-            self._jsonheader_len = struct.unpack(
-                "H", self._recv_buffer[:hdrlen]
-            )[0]
+            self._jsonheader_len = struct.unpack(">H", self._recv_buffer[:hdrlen])[0]
             self._recv_buffer = self._recv_buffer[hdrlen:]
 
     def write(self):
@@ -74,33 +76,25 @@ class Message:
     def process_jsonheader(self):
         hdrlen = self._jsonheader_len
         if len(self._recv_buffer) >= hdrlen:
-            self.jsonheader = self._json_decode(
-                self._recv_buffer[:hdrlen], "utf-8"
-            )
+            self.jsonheader = json.loads(self._recv_buffer[:hdrlen].decode("utf-8"))
             self._recv_buffer = self._recv_buffer[hdrlen:]
-            for reqhdr in (
-                "byteorder",
-                "content-length",
-                "content-type",
-                "content-encoding",
-            ):
+            for reqhdr in ["byteorder", "content-length", "content-type", "content-encoding"]:
                 if reqhdr not in self.jsonheader:
                     raise ValueError(f"Missing required header '{reqhdr}'.")
 
     def process_request(self):
         content_len = self.jsonheader["content-length"]
-        if len(self._recv_buffer) < content_len:
-            return
-        data = self._recv_buffer[:content_len]
-        self._recv_buffer = self._recv_buffer[content_len:]
-        if self.jsonheader["content-type"] == "text/json":
-            encoding = self.jsonheader["content-encoding"]
-            self.request = self._json_decode(data, encoding)
-            print(f"Received request {self.request!r} from {self.addr}")
-        else:
-            self.request = data
-            print(f"Received {self.jsonheader['content-type']} Request from {self.addr}")
-            self._set_selector_events_mask("w")
+        if len(self._recv_buffer) >= content_len:
+            data = self._recv_buffer[:content_len]
+            self._recv_buffer = self._recv_buffer[content_len:]
+            if self.jsonheader["content-type"] == "text/json":
+                encoding = self.jsonheader["content-encoding"]
+                self.request = json.loads(data.decode(encoding))
+                print(f"Received request {self.request!r} from {self.addr}")
+            else:
+                self.request = data
+                print(f"Received {self.jsonheader['content-type']} Request from {self.addr}")
+                self._set_selector_events_mask("w")
 
     def process_events(self, mask):
         if mask & selectors.EVENT_READ:
@@ -108,5 +102,51 @@ class Message:
         if mask & selectors.EVENT_WRITE:
             self.write()
 
+    def close(self):
+        print(f"Closing connection to {self.addr}")
+        self.selector.unregister(self.sock)
+        self.sock.close()
+
+    def read(self):
+        pass
+
+def accept_wrapper(sock):
+    conn, addr = sock.accept()  # Should be ready to read
+    print(f"Accepted connection from {addr}")
+    sock.setblocking(False)
+    message = Message(sel, conn, addr)
+    sel.register(conn, selectors.EVENT_READ, data=message)
+
 if __name__ == '__main__':
-    pass 
+    sel = selectors.DefaultSelector()
+
+    host = "127.0.0.1"
+    port = 65432
+    addr = (host, port)
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind(addr)
+    server.listen()
+    server.setblocking(False)
+
+    sel.register(server, selectors.EVENT_READ, data=None)
+
+    print(f"Server listening on {host}:{port}")
+
+    try:
+        while True:
+            events = sel.select()
+            for key, mask in events:
+                if key.data is None:
+                    accept_wrapper(key.fileobj)
+                else:
+                    message = key.data
+                    try:
+                        message.process_events(mask)
+                    except Exception as e:
+                        print(f"Error: Exception for {message.addr}: {e}")
+                        message.close()
+    except KeyboardInterrupt:
+        print("Server shutting down.")
+    finally:
+        sel.close()

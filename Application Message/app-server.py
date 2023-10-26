@@ -16,10 +16,15 @@ def accept_wrapper(sock):
 
 sel = selectors.DefaultSelector()
 
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.bind(('127.0.0.1', 65432))
+server.listen(10)
+
 def start_server():
     try:
         while True:
-            events = sel.select(timeout=1)  # Set a timeout (e.g., 1 second)
+            events = sel.select(timeout=1)
+            print(f"Selected events: {events}")
             for key, mask in events:
                 if key.data is None:
                     accept_wrapper(key.fileobj)
