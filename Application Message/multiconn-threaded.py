@@ -15,7 +15,7 @@ def threaded(c):
     c.close()
 
 def Main():
-    host = '10.1.2.138'  # The host should be a string
+    host = '127.0.0.1'  # The host should be a string
     port = 65432
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((host, port))

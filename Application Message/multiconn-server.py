@@ -25,7 +25,7 @@ def start_server(host, port):
                 print(f"Received {recv_data!r} from connection {data.connid}")
                 data.recv_total += len(recv_data)
             if not recv_data or data.recv_total == data.msg_total:
-                print(f"Closing connection {dataa.connid}")
+                print(f"Closing connection {data.connid}")
                 sel.unregister(sock)
                 sock.close()
 

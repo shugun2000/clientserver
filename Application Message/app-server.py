@@ -43,4 +43,6 @@ def start_server():
     finally:
         sel.close()
 
-start_server()
+if __name__ == "__main__":
+    print("Server is running...")
+    start_server()
