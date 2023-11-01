@@ -4,14 +4,15 @@ import selectors
 import types
 
 class Message:
-    def __init__(self, selector, sock, addr, request):
-        self.selector = selector
+    def __init__(self, sock, addr, request=None):
         self.sock = sock
         self.addr = addr
+        self._jsonheader_len = None
+        self._jsonheader = None
         self.request = request
-        self._request_queued = False
-        self._send_buffer = b""  # Initialize send buffer
-        self._selector_events_mask = selectors.EVENT_WRITE
+        self.response_created = False
+        self._recv_buffer = b""
+        self._send_buffer = b""
 
     def write(self):
         if not self._request_queued:

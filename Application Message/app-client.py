@@ -1,6 +1,5 @@
 import sys
 import socket
-import threading
 import libclient
 
 def start_connection(host, port, request):
@@ -10,8 +9,8 @@ def start_connection(host, port, request):
     sock.setblocking(False)
     sock.connect_ex(addr)
     message = libclient.Message(sock, addr, request)
-    message.start()  
-    
+    message.start_connection()
+
 if __name__ == '__main__':
     host = '127.0.0.1'
     port = 65432

@@ -5,13 +5,12 @@ import struct
 import json
 
 class Message:
-    def __init__(self, selector, sock, addr):
-        self.selector = selector
+    def __init__(self, sock, addr, request=None):
         self.sock = sock
         self.addr = addr
         self._jsonheader_len = None
         self._jsonheader = None
-        self.request = None
+        self.request = request
         self.response_created = False
         self._recv_buffer = b""
         self._send_buffer = b""
