@@ -20,7 +20,7 @@ def Main():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((host, port))
     print("Socket bound to port", port)
-    s.listen(5)
+    s.listen(3)
     print("Socket is listening")
     
     while True:

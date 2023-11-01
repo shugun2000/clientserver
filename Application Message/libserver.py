@@ -110,10 +110,10 @@ class Message:
         pass
 
 def accept_wrapper(sock):
-    conn, addr = sock.accept()  # Should be ready to read
+    conn, addr = sock.accept()
     print(f"Accepted connection from {addr}")
-    sock.setblocking(False)
-    message = Message(sel, conn, addr)
+    conn.setblocking(False)
+    message = Message(conn, addr, request=None)
     sel.register(conn, selectors.EVENT_READ, data=message)
 
 if __name__ == '__main__':

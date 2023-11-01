@@ -1,7 +1,6 @@
-import sys
-import socket
 import selectors
-import types
+import struct
+import json
 
 class Message:
     def __init__(self, sock, addr, request=None):
@@ -13,7 +12,8 @@ class Message:
         self.response_created = False
         self._recv_buffer = b""
         self._send_buffer = b""
-
+        self._request_queued = False
+        
     def write(self):
         if not self._request_queued:
             self.queue_request()
@@ -46,6 +46,12 @@ class Message:
 
     def process_response(self):
         self.close()
+    
+    def process_protoheader(self):
+        hdrlen = 2
+        if len(self._recv_buffer) >= hdrlen:
+            self._jsonheader_len = struct.unpack(">H", self._recv_buffer[:hdrlen])[0]
+            self._recv_buffer = self._recv_buffer[hdrlen:]
 
     def _read(self):
         try:
