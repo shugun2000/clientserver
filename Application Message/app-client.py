@@ -27,10 +27,20 @@ def process_response(message):
     if message.request:
         message.process_request()
 
+def send_message(self,message):
+    try:
+        self.sock.send(message.encode('ascii'))
+    except Exception as e:
+        print(f"Error sending message: {e}")
+
 if __name__ == '__main__':
     host = '127.0.0.1'
     port = 65432
-    request = b"binary test"
+    request = {
+        "content": "shaurya says geeksforgeeks",
+        "type": "text",
+        "encoding": "ascii"
+    }
 
     try:
         start_client(host, port, request)
@@ -38,6 +48,11 @@ if __name__ == '__main__':
             events = sel.select()
             for key, mask in events:
                 message = key.data
-                process_response(message)
+                if mask & selectors.EVENT_WRITE:
+                    # Send a message to the server here
+                    message.sock.send(request["content"].encode('ascii'))
+                elif mask & selectors.EVENT_READ:
+                    process_response(message)
+
     except KeyboardInterrupt:
         print("Client application shutting down.")
