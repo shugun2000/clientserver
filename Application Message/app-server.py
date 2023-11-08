@@ -61,6 +61,17 @@ def process_events(self, mask):
     if mask & selectors.EVENT_WRITE:
         self.write()
 
+def process_response(self):
+    self.close()
+    if self.response:
+        if self.response["type"] == "download":
+            filename = self.response["filename"]
+            content = base64.b64decode(self.response["content"])
+            with open(filename, 'wb') as file:
+                file.write(content)
+            print(f"Downloaded file: {filename}")
+
+
 if __name__ == '__main__':
     host = "127.0.0.1"
     port = 65432

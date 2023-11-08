@@ -1,6 +1,7 @@
 import selectors
 import struct
 import json
+import base64
 
 class Message:
     def __init__(self, sock, addr, request=None):
@@ -9,6 +10,7 @@ class Message:
         self._jsonheader_len = None
         self._jsonheader = None
         self.request = request
+        self.response = None
         self.response_created = False
         self._recv_buffer = b""
         self._send_buffer = b""
@@ -45,6 +47,13 @@ class Message:
             self._request_queued = True
 
     def process_response(self):
+        if self.request:
+            if self.response and self.response["type"] == "download":
+                filename = self.response["filename"]
+                content = base64.b64decode(self.response["content"])
+                with open(filename,'wb') as file:
+                    file.write(content)
+                    print(f"Download file: {filename}")
         self.close()
     
     def process_protoheader(self):

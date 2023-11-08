@@ -31,6 +31,8 @@ def process_response(message):
         message.process_jsonheader()
     if message.request:
         message.process_request()
+    if message.response:
+        print("Received a response:", message.response)
 
 def send_message(self,message):
     try:
@@ -50,8 +52,9 @@ def upload_file(client_socket, filename):
             }
             request_json = json.dumps(request)
             client_socket.send(request_json.encode('ascii'))
+        print(f"Uploaded file: {filename}")
     except Exception as e:
-        print(f"Error uploading file:{e}")
+        print(f"Error uploading file: {e}")
 
 def download_file(client_socket, filename):
     try:
@@ -61,8 +64,16 @@ def download_file(client_socket, filename):
         }
         request_json = json.dumps(request)
         client_socket.send(request_json.encode('ascii'))
+
+        response = client_socket.recv(4096)  # Receive the response from the server
+        response_data = json.loads(response.decode('ascii'))
+        if response_data["type"] == "download":
+            content = base64.b64decode(response_data["content"])
+            with open(filename, 'wb') as file:
+                file.write(content)
+            print(f"Downloaded file: {filename}")
     except Exception as e:
-        print(f"Error requesting file download: {e}")
+        print(f"Error downloading file: {e}")
 
 if mask & selectors.EVENT_READ:
     response = message.response
@@ -77,7 +88,7 @@ if __name__ == '__main__':
     host = '127.0.0.1'
     port = 65432
     request = {
-        "content": "shaurya says geeksforgeeks",
+        "content": "yoooooo",
         "type": "text",
         "encoding": "ascii"
     }
@@ -89,10 +100,16 @@ if __name__ == '__main__':
             for key, mask in events:
                 message = key.data
                 if mask & selectors.EVENT_WRITE:
-                    # Send a message to the server here
+                    "Huh?"
                     message.sock.send(request["content"].encode('ascii'))
                 elif mask & selectors.EVENT_READ:
-                    process_response(message)
+                    response = message.response
+                    if response and response["type"] == "download":
+                        filename = response["filename"]
+                        content = base64.b64decode(response["content"])
+                        with open(filename, 'wb') as file:
+                            file.write(content)
+                        print(f"Downloaded file: {filename}")
 
     except KeyboardInterrupt:
         print("Client application shutting down.")
