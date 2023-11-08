@@ -3,6 +3,9 @@ import socket
 import selectors
 import libclient
 import struct
+import json
+import base64
+import os
 
 sel = selectors.DefaultSelector()
 
@@ -20,6 +23,8 @@ def start_client(host, port, request):
     message = libclient.Message(client_socket, addr, request=None)
     sel.register(client_socket, selectors.EVENT_WRITE, data=message)
 
+    upload_file(client_socket, "example.txt")
+
 def process_response(message):
     message.process_protoheader()
     if message._jsonheader_len is not None:
@@ -32,6 +37,41 @@ def send_message(self,message):
         self.sock.send(message.encode('ascii'))
     except Exception as e:
         print(f"Error sending message: {e}")
+
+def upload_file(client_socket, filename):
+    try:
+        with open(filename, 'rb') as file:
+            content = file.read()
+            encoded_content = base64.b64encode(content).decode('ascii')
+            request = {
+                "type": "upload",
+                "filename": os.path.basename(filename),
+                "content": encoded_content,
+            }
+            request_json = json.dumps(request)
+            client_socket.send(request_json.encode('ascii'))
+    except Exception as e:
+        print(f"Error uploading file:{e}")
+
+def download_file(client_socket, filename):
+    try:
+        request = {
+            "type": "download",
+            "filename": filename,
+        }
+        request_json = json.dumps(request)
+        client_socket.send(request_json.encode('ascii'))
+    except Exception as e:
+        print(f"Error requesting file download: {e}")
+
+if mask & selectors.EVENT_READ:
+    response = message.response
+    if response["type"] == "download":
+        filename = response["filename"]
+        content = base64.b64decode(response["content"])
+        with open(filename, 'wb') as file:
+            file.write(content)
+        print(f"Downloaded file: {filename}")
 
 if __name__ == '__main__':
     host = '127.0.0.1'
