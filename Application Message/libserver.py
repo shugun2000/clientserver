@@ -49,16 +49,23 @@ class Message:
         header = struct.pack(">H", len(jsonheader))
         return header + jsonheader
 
+def _read(self):
+    try:
+        data = self.sock.recv(4096)
+        if data:
+            self._recv_buffer += data
+        else:
+            raise RuntimeError("Connection closed by the client")
+    except BlockingIOError:
+        pass
+
     def _write(self):
         if self._send_buffer:
             try:
                 sent = self.sock.send(self._send_buffer)
+                self._send_buffer = self._send_buffer[sent:]
             except BlockingIOError:
                 pass
-            else:
-                self._send_buffer = self._send_buffer[sent:]
-                if sent and not self._send_buffer:
-                    self.close()
 
     def _read(self):
         pass
@@ -101,6 +108,15 @@ class Message:
              self.handle_upload_request()
         elif self.request["type"] == "download":
             self.handle_download_request()
+        try:
+            if self.request:
+                if self.request:
+                    if self.request["type"] == "upload":
+                        self.handle_upload_request()
+                    elif self.request["type"] == "download":
+                        self.handle_download_request()
+        except Exception as e:
+            print(f"Error processing request: {e}")
 
 def handle_upload_request(self):
     try:

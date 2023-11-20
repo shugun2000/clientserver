@@ -23,7 +23,14 @@ def start_client(host, port, request):
     message = libclient.Message(client_socket, addr, request=None)
     sel.register(client_socket, selectors.EVENT_WRITE, data=message)
 
-    upload_file(client_socket, "example.txt")
+    filename = "example.txt"
+    file_path = os.path.abspath(filename)
+    print(f"File path: {file_path}")
+
+    if not os.path.exists(file_path):
+        print(f"Error: File not found at {file_path}")
+    else:
+        upload_file(client_socket, file_path)
 
 def handle_response(response):
     if response["type"] == "download":
@@ -33,7 +40,7 @@ def handle_response(response):
             file.write(content)
         print(f"Downloaded file: {filename}")
 
-def process_response(message):
+def process_response(message, mask):
     message.process_protoheader()
     if message._jsonheader_len is not None:
         message.process_jsonheader()
@@ -43,7 +50,8 @@ def process_response(message):
         print("Received a response:", message.response)
         handle_response(message.response)
 
-        if message.events & selectors.EVENT_READ:
+        # Process download when EVENT_READ occurs
+        if mask & selectors.EVENT_READ:
             response = message.response
             if response["type"] == "download":
                 filename = response["filename"]
@@ -52,25 +60,19 @@ def process_response(message):
                     file.write(content)
                 print(f"Downloaded file: {filename}")
 
-def send_message(self,message):
+def upload_file(client_socket, file_path):
     try:
-        self.sock.send(message.encode('ascii'))
-    except Exception as e:
-        print(f"Error sending message: {e}")
-
-def upload_file(client_socket, filename):
-    try:
-        with open(filename, 'rb') as file:
+        with open(file_path, 'rb') as file:
             content = file.read()
             encoded_content = base64.b64encode(content).decode('ascii')
             request = {
                 "type": "upload",
-                "filename": os.path.basename(filename),
+                "filename": os.path.basename(file_path),
                 "content": encoded_content,
             }
             request_json = json.dumps(request)
             client_socket.send(request_json.encode('ascii'))
-        print(f"Uploaded file: {filename}")
+        print(f"Uploaded file: {file_path}")
     except Exception as e:
         print(f"Error uploading file: {e}")
 
@@ -93,35 +95,35 @@ def download_file(client_socket, filename):
     except Exception as e:
         print(f"Error downloading file: {e}")
 
-if mask & selectors.EVENT_READ:
-    response = message.response
-    if response["type"] == "download":
-        filename = response["filename"]
-        content = base64.b64decode(response["content"])
-        with open(filename, 'wb') as file:
-            file.write(content)
-        print(f"Downloaded file: {filename}")
-
 if __name__ == '__main__':
     host = '127.0.0.1'
     port = 65432
     request = {
-        "content": "shaurya says geeksforgeeks",
+        "content": "Hello",
         "type": "text",
         "encoding": "ascii"
     }
 
-    try:
-        start_client(host, port, request)
-        while True:
+try:
+    while True:
+        try:
             events = sel.select()
             for key, mask in events:
                 message = key.data
                 if mask & selectors.EVENT_WRITE:
-                    # Send a message to the server here
-                    message.sock.send(request["content"].encode('ascii'))
+                      if "content" in request:
+                        try:
+                            message.sock.send(request["content"].encode('ascii'))
+                        except (OSError, ConnectionResetError) as e:
+                            print(f"Error sending message: {e}")
+                            message.close()
                 elif mask & selectors.EVENT_READ:
                     process_response(message, mask)
-
-    except KeyboardInterrupt:
-        print("Client application shutting down.")
+        except Exception as e:
+            print(f"Error in the main loop: {e}")
+            import traceback
+            traceback.print_exc()
+except KeyboardInterrupt:
+    print("Client application shutting down.")
+finally:
+    sel.close()
