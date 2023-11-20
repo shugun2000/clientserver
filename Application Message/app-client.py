@@ -25,6 +25,14 @@ def start_client(host, port, request):
 
     upload_file(client_socket, "example.txt")
 
+def handle_response(response):
+    if response["type"] == "download":
+        filename = response["filename"]
+        content = base64.b64decode(response["content"])
+        with open(filename, 'wb') as file:
+            file.write(content)
+        print(f"Downloaded file: {filename}")
+
 def process_response(message):
     message.process_protoheader()
     if message._jsonheader_len is not None:
@@ -33,6 +41,16 @@ def process_response(message):
         message.process_request()
     if message.response:
         print("Received a response:", message.response)
+        handle_response(message.response)
+
+        if message.events & selectors.EVENT_READ:
+            response = message.response
+            if response["type"] == "download":
+                filename = response["filename"]
+                content = base64.b64decode(response["content"])
+                with open(filename, 'wb') as file:
+                    file.write(content)
+                print(f"Downloaded file: {filename}")
 
 def send_message(self,message):
     try:
@@ -88,7 +106,7 @@ if __name__ == '__main__':
     host = '127.0.0.1'
     port = 65432
     request = {
-        "content": "yoooooo",
+        "content": "shaurya says geeksforgeeks",
         "type": "text",
         "encoding": "ascii"
     }
@@ -100,16 +118,10 @@ if __name__ == '__main__':
             for key, mask in events:
                 message = key.data
                 if mask & selectors.EVENT_WRITE:
-                    "Huh?"
+                    # Send a message to the server here
                     message.sock.send(request["content"].encode('ascii'))
                 elif mask & selectors.EVENT_READ:
-                    response = message.response
-                    if response and response["type"] == "download":
-                        filename = response["filename"]
-                        content = base64.b64decode(response["content"])
-                        with open(filename, 'wb') as file:
-                            file.write(content)
-                        print(f"Downloaded file: {filename}")
+                    process_response(message, mask)
 
     except KeyboardInterrupt:
         print("Client application shutting down.")
